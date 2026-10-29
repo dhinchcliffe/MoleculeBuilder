@@ -34,6 +34,6 @@ function experiment(kind){if(!ready)return;snapshot();const a=createAtom(11,-3,0
 $('#salt').onclick=()=>experiment('salt');$('#repel').onclick=()=>experiment('repel');
 renderElements();refresh();
 function frame(now){const dt=Math.min((now-last)/1000,.035);last=now;if(!paused){time+=dt;if(!lab.focusId)step(atoms,dt,drag?.id);}lab.render(atoms,selected,time);requestAnimationFrame(frame);}requestAnimationFrame(frame);
-(async()=>{const saved=await store.init();atoms=(saved||[createAtom(6,-2.4,0),createAtom(8,2.4,0)]).map(a=>({...a,vx:0,vy:0}));selected=atoms[0]?.id;ready=true;refresh();if(!saved)save();})();
+(async()=>{const saved=await store.init();atoms=(saved||[createAtom(6,-2.4,0),createAtom(8,2.4,0)]).map(a=>({...a,vx:0,vy:0}));selected=atoms[0]?.id;ready=true;$('#fit').click();refresh();if(!saved)save();})();
 setInterval(()=>{if(ready&&atoms.some(a=>Math.abs(a.vx)+Math.abs(a.vy)>.01))save();},5000);
 window.addEventListener('online',()=>store.flush());document.addEventListener('visibilitychange',()=>{if(document.hidden&&ready)save();});

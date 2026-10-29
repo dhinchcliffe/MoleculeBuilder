@@ -38,6 +38,7 @@ A dedicated Supabase project stores one workspace per browser session capability
 
 - `src/chemistry.js`: pure atomic model, validation, force integration.
 - `src/scene.js`: Three.js scene, lighting, picking, labels and camera.
+- `src/canvas-scene.js`: projected software rendering fallback when WebGL is unavailable.
 - `src/main.js`: pointer interactions, application state and inspector.
 - `src/storage.js`: local fallback and private cloud workspace persistence.
 - `src/style.css`: responsive dark interface.
@@ -47,3 +48,7 @@ A dedicated Supabase project stores one workspace per browser session capability
 ## Changes and rollback
 
 Make focused commits; run `npm test` and `npm run build`. Verify mouse/touch interactions, cloud isolation and responsive layouts after relevant changes. For a bad UI release, promote the last healthy deployment in Vercel and revert its Git commit. Avoid destructive schema changes; use additive migrations. Do not delete the Supabase project or workspace table to roll back frontend code.
+
+## Initial verification
+
+Seven model tests and production build passed. Browser checks confirmed proton transmutation, drag-to-remove particles, electron edits, preset loading, and restoration after reload. Live cloud save was observed and the database RLS owner/cross-session isolation checks passed. The test browser disables WebGL, so visual checks exercised the software fallback; physical iPad/touch and GPU rendering still merit device testing.
