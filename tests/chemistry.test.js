@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createAtom,element,charge,mass,shells,changeParticle,step,validateAtoms} from '../src/chemistry.js';
+test('proton changes transmute carbon to nitrogen without changing electrons',()=>{const a=createAtom(6);changeParticle(a,'p',1);assert.equal(element(a).symbol,'N');assert.equal(charge(a),1);assert.equal(mass(a),13);});
+test('neutrons change isotope but not element or charge',()=>{const a=createAtom(6);changeParticle(a,'n',1);assert.equal(element(a).symbol,'C');assert.equal(mass(a),13);assert.equal(charge(a),0);});
+test('shell occupancies for first 20 electrons',()=>{assert.deepEqual(shells(0),[]);assert.deepEqual(shells(18),[2,8,8]);assert.deepEqual(shells(20),[2,8,8,2]);});
+test('opposite ions approach, like ions separate, neutral atoms do not attract',()=>{for(const [q,sign] of [[-1,1],[1,-1],[0,0]]){const a=createAtom(11,-3,0),b=createAtom(17,3,0);a.e=10;b.e=b.p-q;step([a,b],.03);assert.equal(Math.sign(a.vx),sign);assert.equal(Math.sign(b.vx),sign===0?0:-sign);}});
+test('particles remain within supported bounds',()=>{const a=createAtom(1);assert.equal(changeParticle(a,'p',-1),false);a.e=20;assert.equal(changeParticle(a,'e',1),false);assert.equal(changeParticle(a,'unknown',1),false);});
+test('overlapping atoms separate without NaN and held atom does not move',()=>{const a=createAtom(6),b=createAtom(8);step([a,b],.03,a.id);assert.equal(a.x,0);assert.ok(Number.isFinite(b.x));assert.notEqual(b.x,0);});
+test('reject malformed and oversized saved scenes',()=>{assert.equal(validateAtoms([createAtom(6)]),true);assert.equal(validateAtoms([{p:999}]),false);assert.equal(validateAtoms(Array.from({length:25},()=>createAtom(1))),false);});

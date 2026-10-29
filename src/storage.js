@@ -1,0 +1,12 @@
+import {validateAtoms} from './chemistry.js';
+const URL='https://ikftzjchidgkyirugfgu.supabase.co/rest/v1/workspaces';
+const KEY='sb_publishable_Lo9Tn0KceiJtGJuO5cUlWg_GOCb-ohe'; // Public client key; row access requires private browser capability.
+export class WorkspaceStore{
+ constructor(status){this.status=status;this.token=null;this.hash=null;this.timer=null;this.pending=null;this.saving=false;}
+ async init(){try{this.token=localStorage.getItem('molecule-session-v1');if(!/^[a-f0-9]{64}$/.test(this.token||'')){this.token=Array.from(crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('');localStorage.setItem('molecule-session-v1',this.token);}this.hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(this.token))),v=>v.toString(16).padStart(2,'0')).join('');}catch{this.status('Storage unavailable · temporary session');return null;}
+ let local=null;try{local=JSON.parse(localStorage.getItem('molecule-workspace-v1'));}catch{}
+ try{const res=await fetch(URL+'?select=atoms,updated_at&session_hash=eq.'+this.hash,{headers:this.headers(),signal:AbortSignal.timeout(10000)});if(!res.ok)throw Error('Cloud unavailable');const rows=await res.json();const cloud=rows[0];const best=local&&(!cloud||local.updated_at>cloud.updated_at)?local:cloud;this.status('Workspace ready');return validateAtoms(best?.atoms)?best.atoms:null;}catch{this.status('Offline · saved on this device');return validateAtoms(local?.atoms)?local.atoms:null;}}
+ headers(){return {'apikey':KEY,'Content-Type':'application/json','x-molecule-session':this.token};}
+ queue(atoms){const data={atoms:atoms.map(({id,p,n,e,x,y})=>({id,p,n,e,x,y})),updated_at:new Date().toISOString()};try{localStorage.setItem('molecule-workspace-v1',JSON.stringify(data));this.status('Saved on this device');}catch{this.status('Device storage unavailable');}if(!this.token)return;this.pending=data;clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),900);}
+ async flush(){if(this.saving||!this.pending)return;this.saving=true;const data=this.pending;this.pending=null;try{const res=await fetch(URL+'?on_conflict=session_hash',{method:'POST',headers:{...this.headers(),Prefer:'resolution=merge-duplicates'},body:JSON.stringify({session_hash:this.hash,...data}),signal:AbortSignal.timeout(10000)});if(!res.ok)throw Error('Save failed');this.status('Saved to cloud');}catch{this.status('Offline · saved on this device');if(!this.pending)this.pending=data;}finally{this.saving=false;}}
+}
