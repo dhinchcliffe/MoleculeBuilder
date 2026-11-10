@@ -3,8 +3,17 @@ import {elements,createAtom,element,charge,chargeLabel,mass,shells,changeParticl
 import {LabScene} from './scene.js';
 import {CanvasScene} from './canvas-scene.js';
 import {WorkspaceStore} from './storage.js';
+import {BondLab, ionicPresets, covalentPresets} from './bond-lab.js';
 const $=s=>document.querySelector(s);let atoms=[],selected=null,paused=false,drag=null,history=[],last=performance.now(),time=0,ready=false;const store=new WorkspaceStore(s=>$('#save-status').textContent=s);let lab;
 try{lab=new LabScene($('#scene'),$('#labels'));}catch{lab=new CanvasScene($('#scene'),$('#labels'));}
+const bondLab = new BondLab(lab, $('#bond-overlay'), $('#bond-status'), {
+ getAtoms: () => atoms,
+ snapshot: () => snapshot(),
+ save: () => save(),
+ refresh: () => refresh(),
+ replace: nextAtoms => { atoms=nextAtoms; selected=atoms[0]?.id; lab.focusId=null; lab.setZoom(.85); paused=false; $('#pause').textContent='Pause'; refresh(); save(); }
+});
+function resetGuided(){bondLab.reset();}
 const snapshot=()=>{history.push(JSON.stringify(atoms));if(history.length>30)history.shift();$('#undo').disabled=false;};
 const save=()=>store.queue(atoms);
 function toast(t){$('#toast').textContent=t;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').textContent='',3800);}
@@ -12,8 +21,8 @@ function refresh(){const a=atoms.find(a=>a.id===selected);$('#atom-count').textC
  const el=element(a);$('#symbol').textContent=el.symbol;$('#element-name').textContent=el.name;$('#isotope').textContent=`${el.name}-${mass(a)}`;$('#charge-badge').textContent=charge(a)===0?'Neutral':`${chargeLabel(a)} ion`;$('#atomic-number').textContent=a.p;$('#mass-number').textContent=mass(a);$('#atomic-weight').textContent=el.weight+' u';$('#shell-count').textContent=shells(a.e).join(' · ')||'No electrons';for(const k of ['p','n','e']){ $(`#count-${k}`).textContent=a[k];$(`[data-delta="-${k}"]`).disabled=a[k]<=(k==='p'?1:0);$(`[data-delta="+${k}"]`).disabled=a[k]>=(k==='n'?30:20);}
  $('#atom-note').textContent=`${a.p} proton${a.p===1?'':'s'} makes this ${el.name.toLowerCase()}. ${charge(a)===0?'Equal protons and electrons: no net charge.':charge(a)>0?'Fewer electrons than protons: a positive ion.':'More electrons than protons: a negative ion.'} Arbitrary particle combinations may be unstable; decay is not simulated.`;
 }
-function add(z,x,y){if(!ready)return;if(atoms.length>=24)return toast('Workspace limit: 24 atoms. Remove one to add another.');snapshot();const a=createAtom(z,x??(Math.random()-.5)*7,y??(Math.random()-.5)*4);atoms.push(a);selected=a.id;lab.focusId=null;refresh();save();}
-function edit(k,d){const a=atoms.find(a=>a.id===selected);if(!a)return;const before=JSON.stringify(atoms);if(changeParticle(a,k,d)){history.push(before);$('#undo').disabled=false;refresh();save();}else toast('That is the particle limit for this MVP.');}
+function add(z,x,y){if(!ready)return;resetGuided();if(atoms.length>=24)return toast('Workspace limit: 24 atoms. Remove one to add another.');snapshot();const a=createAtom(z,x??(Math.random()-.5)*7,y??(Math.random()-.5)*4);atoms.push(a);selected=a.id;lab.focusId=null;refresh();save();}
+function edit(k,d){const a=atoms.find(a=>a.id===selected);if(!a)return;resetGuided();const before=JSON.stringify(atoms);if(changeParticle(a,k,d)){history.push(before);$('#undo').disabled=false;refresh();save();}else toast('That is the particle limit for this MVP.');}
 function ghost(text,x,y){const node=document.createElement('div');node.className='drag-ghost';node.textContent=text;document.body.append(node);node.style.left=x+'px';node.style.top=y+'px';return node;}
 function startSource(e,kind,value){if(!ready)return;e.preventDefault();drag={kind,value,startX:e.clientX,startY:e.clientY,ghost:ghost(kind==='element'?elements[value-1].symbol:value+'⁺',e.clientX,e.clientY),moved:false};e.currentTarget.setPointerCapture(e.pointerId);}
 function renderElements(filter=''){$('#element-list').innerHTML='';elements.filter(e=>(e.name+' '+e.symbol+' '+e.z).toLowerCase().includes(filter.toLowerCase())).forEach(el=>{const btn=document.createElement('button');btn.className='element';btn.setAttribute('aria-label',`Add ${el.name}`);btn.innerHTML=`<sup>${el.z}</sup><b>${el.symbol}</b><small>${el.name}</small>`;btn.addEventListener('pointerdown',e=>startSource(e,'element',el.z));btn.addEventListener('click',e=>{if(e.detail===0)add(el.z);});$('#element-list').append(btn);});}
@@ -28,12 +37,16 @@ $('#search').oninput=e=>renderElements(e.target.value);
 $('#focus').onclick=()=>{lab.focusId=lab.focusId?null:selected;refresh();};
 $('#zoom-in').onclick=()=>{lab.focusId=null;lab.setZoom(lab.zoom*1.2);refresh();};$('#zoom-out').onclick=()=>{lab.focusId=null;lab.setZoom(lab.zoom/1.2);refresh();};$('#fit').onclick=()=>{lab.focusId=null;const maxX=Math.max(4,...atoms.map(a=>Math.abs(a.x)+2)),maxY=Math.max(3,...atoms.map(a=>Math.abs(a.y)+2));lab.setZoom(Math.min(1,7/maxY,7*lab.camera.aspect/maxX));refresh();};
 $('#scene').addEventListener('wheel',e=>{e.preventDefault();lab.focusId=null;lab.setZoom(lab.zoom*Math.exp(-e.deltaY*.001));refresh();},{passive:false});
-$('#pause').onclick=()=>{paused=!paused;$('#pause').textContent=paused?'Resume':'Pause';};$('#remove').onclick=()=>{snapshot();atoms=atoms.filter(a=>a.id!==selected);selected=atoms[0]?.id;lab.focusId=null;refresh();save();};
-$('#clear').onclick=()=>{if(!atoms.length)return;snapshot();atoms=[];selected=null;lab.focusId=null;refresh();save();toast('Workspace cleared. Undo brings it back.');};$('#undo').onclick=()=>{if(!history.length)return;atoms=JSON.parse(history.pop());selected=atoms[0]?.id;lab.focusId=null;$('#undo').disabled=!history.length;refresh();save();};
-function experiment(kind){if(!ready)return;snapshot();const a=createAtom(11,-3,0),b=createAtom(kind==='salt'?17:11,3,0);a.e=10;b.e=kind==='salt'?18:10;atoms=[a,b];selected=a.id;lab.focusId=null;lab.setZoom(.85);paused=false;$('#pause').textContent='Pause';refresh();save();toast(kind==='salt'?'Opposite charges attract. This is an ion pair, not a full salt crystal.':'Like charges repel. Watch the two positive ions move apart.');}
+$('#pause').onclick=()=>{paused=!paused;$('#pause').textContent=paused?'Resume':'Pause';};$('#remove').onclick=()=>{resetGuided();snapshot();atoms=atoms.filter(a=>a.id!==selected);selected=atoms[0]?.id;lab.focusId=null;refresh();save();};
+$('#clear').onclick=()=>{if(!atoms.length)return;resetGuided();snapshot();atoms=[];selected=null;lab.focusId=null;refresh();save();toast('Workspace cleared. Undo brings it back.');};$('#undo').onclick=()=>{if(!history.length)return;resetGuided();atoms=JSON.parse(history.pop());selected=atoms[0]?.id;lab.focusId=null;$('#undo').disabled=!history.length;refresh();save();};
+function experiment(kind){if(!ready)return;resetGuided();snapshot();const a=createAtom(11,-3,0),b=createAtom(kind==='salt'?17:11,3,0);a.e=10;b.e=kind==='salt'?18:10;atoms=[a,b];selected=a.id;lab.focusId=null;lab.setZoom(.85);paused=false;$('#pause').textContent='Pause';refresh();save();toast(kind==='salt'?'Opposite charges attract. This is an ion pair, not a full salt crystal.':'Like charges repel. Watch the two positive ions move apart.');}
 $('#salt').onclick=()=>experiment('salt');$('#repel').onclick=()=>experiment('repel');
+for(const [kind,presets,container] of [['ionic',ionicPresets,'#ionic-presets'],['covalent',covalentPresets,'#covalent-presets']]){
+ for(const preset of presets){const button=document.createElement('button');button.type='button';button.textContent=preset.name+' ↗';button.onclick=()=>{if(ready)bondLab.load(kind,preset.id);};$(container).append(button);}
+}
+bondLab.reset();
 renderElements();refresh();
-function frame(now){const dt=Math.min((now-last)/1000,.035);last=now;if(!paused){time+=dt;if(!lab.focusId)step(atoms,dt,drag?.id);}lab.render(atoms,selected,time);requestAnimationFrame(frame);}requestAnimationFrame(frame);
+function frame(now){const dt=Math.min((now-last)/1000,.035);last=now;if(!paused){time+=dt;if(!lab.focusId)step(atoms,dt,drag?.id);}lab.render(atoms,selected,time);bondLab.update(now);requestAnimationFrame(frame);}requestAnimationFrame(frame);
 (async()=>{const saved=await store.init();atoms=(saved||[createAtom(6,-2.4,0),createAtom(8,2.4,0)]).map(a=>({...a,vx:0,vy:0}));selected=atoms[0]?.id;ready=true;$('#fit').click();refresh();if(!saved)save();})();
 setInterval(()=>{if(ready&&atoms.some(a=>Math.abs(a.vx)+Math.abs(a.vy)>.01))save();},5000);
 window.addEventListener('online',()=>store.flush());document.addEventListener('visibilitychange',()=>{if(document.hidden&&ready)save();});

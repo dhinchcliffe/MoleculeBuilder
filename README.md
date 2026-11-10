@@ -24,6 +24,14 @@ Vercel: Vite preset, build `npm run build`, output `dist`. Every build runs the 
 - Opposite ions attract; equal-sign ions repel; short-range repulsion prevents collapse. Neutral atoms do not bond automatically. This MVP does not simulate covalent bonding, valence, molecular geometries, nuclear stability/decay, or an ionic crystal lattice. The salt experiment is an isolated ion pair.
 - Particle edits allow hypothetical/unstable configurations. Electron and proton counts are capped at 20, neutrons at 30.
 
+## Guided electron-transfer and covalent-sharing labs
+
+Four ionic guided presets (NaCl, LiF, MgO, CaO) start with neutral atoms. Drag the atoms close together to trigger a visible 1- or 2-electron transfer, followed by the existing charge-attraction simulation. The original pre-ionized Na⁺/Cl⁻ and like-ion repulsion buttons, manual electron editing, and existing physics are unchanged. Guided transfer only activates for the selected neutral preset and never changes manually configured ions.
+
+Four covalent presets (H₂, H₂O, CH₄, CO₂) show animated shared electron pairs while their neutral atoms are close enough. These are **schematic Lewis-style illustrations**, not literal electron orbits or quantum-mechanical simulations. No covalent forces or 3D bond-angle solver are added. Moving atoms apart hides the shared-pair overlay; editing particles exits the guided mode. The guided overlay is temporary and does not change the existing per-browser saved workspace format.
+
+The first-20 shell model (2, 8, 8, 2) remains intentionally introductory. Do not interpret moving dots as measured electron paths. The ionic presets illustrate isolated ion pairs, not extended salt crystals. The baseline before these additions is commit `b880bc0c942bfa9569fec64b9638200a790c7708`.
+
 ## Controls
 
 Drag or tap an element to add it. Drag atoms to move them. Select an atom and choose Zoom into atom. Drag a particle from the inspector into the scene to add it; drag a visible particle to the removal tray to subtract it. Plus/minus buttons provide keyboard/tap alternatives. Use zoom controls or mouse wheel. Clear is reversible using Undo. Presets replace the current scene and can be undone.

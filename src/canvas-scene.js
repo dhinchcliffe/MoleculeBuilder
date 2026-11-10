@@ -6,6 +6,7 @@ export class CanvasScene{
  setZoom(z){this.zoom=Math.max(.45,Math.min(3,z));}
  scale(){return this.height/(this.focusId?5.82:16.74/this.zoom);}
  project(x,y,z=0){const s=this.scale()*(1+z*.035);return {x:this.width/2+(x-this.center.x)*s,y:this.height/2-(y-this.center.y)*s,s};}
+ projectPoint(x,y){return this.project(x,y);}
  point(x,y){const r=this.container.getBoundingClientRect();return {x:(x-r.left-this.width/2)/this.scale()+this.center.x,y:-(y-r.top-this.height/2)/this.scale()+this.center.y};}
  hit(x,y){const r=this.container.getBoundingClientRect();x-=r.left;y-=r.top;if(this.focusId){return this.hits.slice().reverse().find(h=>Math.hypot(x-h.x,y-h.y)<Math.max(12,h.r))?.data||null;}return [...this.models.values()].reverse().find(m=>Math.hypot(x-m.x,y-m.y)<1.9*this.scale())?.data||null;}
  ball(x,y,r,color){const c=this.ctx;const g=c.createRadialGradient(x-r*.35,y-r*.4,r*.05,x,y,r);g.addColorStop(0,'#fff');g.addColorStop(.25,color);g.addColorStop(1,'#182030');c.fillStyle=g;c.beginPath();c.arc(x,y,Math.max(.5,r),0,Math.PI*2);c.fill();}

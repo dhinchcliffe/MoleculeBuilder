@@ -10,6 +10,7 @@ export class LabScene {
  this.ray=new THREE.Raycaster();this.plane=new THREE.Plane(new THREE.Vector3(0,0,1),0);this.resize=new ResizeObserver(()=>this.size());this.resize.observe(container);this.size();
  }
  size(){const {width,height}=this.container.getBoundingClientRect();this.camera.aspect=width/height;this.camera.updateProjectionMatrix();this.renderer.setSize(width,height);}
+ projectPoint(x,y){const v=new THREE.Vector3(x,y,0).project(this.camera);const r=this.container.getBoundingClientRect();return {x:(v.x+1)*r.width/2,y:(1-v.y)*r.height/2};}
  point(clientX,clientY){const r=this.container.getBoundingClientRect();const v=new THREE.Vector2((clientX-r.left)/r.width*2-1,-(clientY-r.top)/r.height*2+1);this.ray.setFromCamera(v,this.camera);return this.ray.ray.intersectPlane(this.plane,new THREE.Vector3());}
  hit(x,y){this.point(x,y);const hits=this.ray.intersectObjects([...this.models.values()].filter(m=>m.group.visible).map(m=>m.group),true);return (this.focusId?hits.find(h=>h.object.userData.particle):hits.find(h=>h.object.userData.atomId))?.object.userData||null;}
  setZoom(z){this.zoom=Math.max(.45,Math.min(3,z));}
